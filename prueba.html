@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ver tareas asignadas</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        #excel-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        #excel-table th, #excel-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        #excel-table th {
+            background-color: #f4f4f4;
+        }
+        .error {
+            color: red;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        #file-info {
+            margin-top: 10px;
+            font-style: italic;
+        }
+        .spacing {
+            margin-bottom: 20px; /* Ajusta el espaciado según sea necesario */
+        }
+    </style>
+</head>
+<body>
+    <h1>Lista de tareas</h1>
+    <input type="file" id="fileInput" accept=".xlsx, .xls" />
+    <div class="spacing"></div> <!-- Espaciado después del botón -->
+    <div id="error-message" class="error"></div>
+    <div id="file-info"></div>
+    <div class="spacing"></div> <!-- Espaciado después de la información del archivo -->
+    <table id="excel-table"></table>
+
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+    <script>
+        document.getElementById('fileInput').addEventListener('change', handleFileSelect, false);
+
+        function handleFileSelect(event) {
+            const fileInput = event.target;
+            const file = fileInput.files[0];
+            const errorMessage = document.getElementById('error-message');
+            const fileInfo = document.getElementById('file-info');
+            const excelTable = document.getElementById('excel-table');
+
+            // Limpiar mensaje de error, la tabla y la información del archivo antes de la validación
+            errorMessage.textContent = '';
+            fileInfo.textContent = '';
+            excelTable.innerHTML = '';
+
+            if (file) {
+                // Verificar si el archivo tiene una extensión aceptada
+                const allowedExtensions = ['.xlsx', '.xls'];
+                const fileExtension = file.name.slice(((file.name.lastIndexOf(".") - 1) >>> 0) + 2);
+
+                if (!allowedExtensions.includes('.' + fileExtension.toLowerCase())) {
+                    errorMessage.textContent = 'Error: Solo se aceptan archivos con extensiones .xlsx o .xls.';
+                    fileInput.value = ''; // Limpiar el campo de archivo
+                    return; // Salir de la función si el archivo no es válido
+                }
+
+                // Mostrar la información del archivo
+                const lastModifiedDate = new Date(file.lastModified);
+                const formattedDate = lastModifiedDate.toLocaleDateString('es-ES');
+                const formattedTime = lastModifiedDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                
+                fileInfo.textContent = `Usted está viendo el archivo ${file.name} el cual fue modificado por última vez el ${formattedDate} a las ${formattedTime}.`;
+
+                // Si el archivo es válido, leer y procesar el archivo Excel
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const htmlString = XLSX.utils.sheet_to_html(worksheet);
+
+                    excelTable.innerHTML = htmlString;
+                };
+                reader.readAsArrayBuffer(file);
+            } else {
+                // Mensaje de error si no se selecciona ningún archivo
+                errorMessage.textContent = 'Por favor, selecciona un archivo.';
+            }
+        }
+    </script>
+</body>
+</html>
